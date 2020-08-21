@@ -1,0 +1,253 @@
+linux command line cheat sheet.
+half-baked helpful notes that i reference often, mostly bc i can never remember how to scp correctly, and some of these awk one liners took me literal days to craft. 
+
+//only on mac :(
+open .
+
+keep only lines containing
+grep "thing"
+
+delete lines containing
+sed '/thing/d'
+sed "/thing/d"
+
+print first row
+awk '{print $1}'
+
+print every other line
+awk ‘NR % 2 == 0’
+
+print first letter
+awk '{print substr($0,0,1)}’
+
+print email format of <fi>.<lastname>@domain.com from list of first and last name
+echo "john smith" | awk '{print substr($1,0,1) "." $2 "@domain.com"}'
+
+delete commas (or whatever)
+cat <filename> | tr -d ","
+
+delete past the @ symbol (for grabbing usernames out of emails)
+awk -F"@" '{print $1}'
+
+pull usernames out of emails
+cat emails.in | cut -d'@' -f1 >usernames.out
+
+should replace all space clusters with a single space
+cat <filename> | tr -s " "
+
+remove whitespace and tabs (only one for each potentially clustered instance.)
+cat em1 |tr "\t " " " > em2
+
+replace spaces with newlines (does the above even... function? what.)  (not sure -s does exactly, it def is applying to the \n but i want it to also apply to the spaces. test later.)
+cat 1| tr "\t" " " | tr -s " " "\n" > 2
+
+sort ignoring case
+sort -u --ignore-case
+
+pull ips out
+grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}' 
+
+pull URL looking things out (really; any text with no spaces, delimiter of ".") (also grabs illegal characters, but who cares) (also ignores x.x, only grabs x.x.x+)
+(/x/g globally, [\S] non whitespace, * thing(s), \. with a for real physical period (escaped), {1,} repeated at least one time) 
+//the others got deleted bc they didn't work on mac :)))
+grep -o '\([^[:space:]]*\.\)\{2,\}[^[:space:]]*' | tr -d "(" | tr -d ")"
+
+
+regex helper (doesn't really work for grep mac regex, which does not accept \S and also needs to have like everything escaped) 
+https://regexr.com/
+
+
+pull out emails
+grep -i -o '[A-Z0-9._%+-]\+@[A-Z0-9.-]\+\.[A-Z]\{2,4\}'
+
+pull out lines of length 5 and less
+cat ugh.5 | awk 'length{0}<6'
+
+pull out first and last lines
+cat thing | awk -F ' ' '{print $1, $NF}'
+where -F is delimiter
+
+more awk:
+cat surnames.in | tr A-Z a-z | awk '{ for (i=97; i<123; i++) printf("%s%c\n", $1, i) }' | awk '{print $1; for (i=1; i<5; i++) printf("%s%s\n", $1, i) }' > snap_usernames.txt
+
+some file processing for names grabbed with carrie’s burp script
+cat a.in |tr A-Z a-z | tr -s "\n" | sort -u | tr -s "&#39;" "'" | awk -F ',' '{print $1}' | awk '{if($2~/\./)print$1, $3; else print $0;}' > a.out 
+
+given a delimiter of " - ", print only the first col of lines containing three col
+awk -F " - " 'NF == 3 {print $1}' < in.txt > out.txt
+
+remove middle initial
+awk '{if($2~/\./)print$1, $3; else print $0;}'
+
+awk '{if($2~/\./)print$1, $3; else print $1, $2;}'
+
+remove empty lines
+cat file | tr -s “\n”
+
+upper to all lower
+tr A-Z a-z
+
+given delimiter, print first col 
+cat file | cut -f1 -d ","
+
+
+trying to remove lines from list A if they exist in B without adding items from B if they do not exist in A: 
+grep -F -vf f1 f2
+grep -vf f1 f2
+
+i THINK you could do it with two passes of comm. (works only on sorted lists?) 
+oh nvm, this 'displays lines from f1 that do not match any lines in f2': 
+comm -1 -3 f2 f1
+
+
+
+vim:
+:%w !pbcopy
+ggdG
+gg”*G
+
+
+sed:
+IMPORTANT NOTE ON SED: if using mac, this does not behave as intended. important changes from regular (GNU) sed to mac/bsd sed;
+sed 'x', single quotes go to double quotes
+sed -i, behaves differently and honestly you don't need -i, just handle the input/output by yourself like an adult. 
+
+//for powershell comments:
+//deletes first LINE with <#, then finds NEXT LINE with #>  and deletes everything in between (including <# and #>). if <# and #> are in the same line, this does not work as intended. ALSO: deletes any lines starting with # (ignoring whitespace(?)), but does leave a blank whitespace line behind. 
+cat file.1 | sed "/<#/,/#>/c\\" | sed "s/^[[:space:]]*#.*$//g" > file.2
+
+
+
+
+not sure what these did
+cat c2 | awk 'NF>3{print}{}'
+//this next one seems to grab and print first/last name from an email like first.lastname@email.com. idk why i would have needed that.
+cat a.in | tr "." " " | tr "@" " " | awk '{print $1,$2}'
+sed -n "0,3p" a.in
+sed -n "1543,3084p" b.fin >c2
+sed -n "3085,$p" b.fin >c3
+
+grep -E -o "\b[a-zA-Z0-9.-]+@[a-zA-Z0-9.-]+\.[a-zA-Z0-9.-]+\b" test-emails.txt | sort -u > email_list.txt 
+or emails, help desk tickets, etc., faq, 
+
+i think this is the <redacted> dumb thing, the .nessus pull out ips and macs
+cat output.txt | sort | cut -f1,3,4 -d "|" | sed 's/  / /g' | sed 's/\|/	/g' | sed 's/\ :\ /	/g'
+
+
+masscan:
+masscan -p80,23,443,21,22,25,3389,110,445,139 <ips> --ping --adapter-port 1357 -oX ms.xml --max-rate 50
+
+masscan -p80,23,443,21,22,25,3389,110,445,139 10.20.4.80-10.20.4.200 --ping -oL ms.out --max-rate 50
+
+masscan --top-ports 10 --ping -oL ms.out --max-rate 50
+
+
+--ping : include ping
+
+masscan -p80,223 74.123.232.0-74.123.239.255 -oL ms.out --max-rate 50
+
+
+kill something
+ctl+c
+
+if that didn’t work
+ctl+z 
+jobs
+kill %1 
+(or whatever number is associated with your stopped job)
+
+if that still didn’t work for some reason;
+kill -9 <thing>
+
+zip:
+zip -r final.zip dir1
+zip final.zip file1 file2 file3
+zip -p <password> file.zip files
+zip -e file.zip files 
+(^will prompt for password)
+unzip file.zip
+
+
+transfer:
+scp -P 22 root@192.0.0.2:/home/file.txt .
+scp -P <port for remote host> <thing to transfer> <place to transfer it>
+scp [OPTION] [user@]SRC_HOST:]file1 [user@]DEST_HOST:]file2
+
+
+ssh:
+root@kb-2017-450:~# ~?
+Supported escape sequences:
+ ~.   - terminate connection (and any multiplexed sessions)
+ ~B   - send a BREAK to the remote system
+ ~C   - open a command line
+ ~R   - request rekey
+ ~V/v - decrease/increase verbosity (LogLevel)
+ ~^Z  - suspend ssh
+ ~#   - list forwarded connections
+ ~&   - background ssh (when waiting for connections to terminate)
+ ~?   - this message
+ ~~   - send the escape character by typing it twice
+(Note that escapes are only recognized immediately after newline.)
+
+
+ssh cont: 
+i was gonna, and then i got tired and realized i dont know how ssh works. have some half baked notes. 
+
+does 
+ssh -D 9000 root@1.1.1.1
+and 
+ssh -D root@1.1.1.1:9000
+work the same? 
+
+
+how does -L work? i only pretend to know. 
+ssh -L 127.0.0.1:9000:127.0.0.1:1234 root@1.1.1.1
+^ o rite, this was if you want it open and closed, don't open a new ssh instance? can't quite remember. 
+
+ssh -i [private_key_file] [username]@127.0.0.1
+
+doesn't use proxy: 
+ssh -L 8834:127.0.0.1:8834 -i file.pem root@1.1.1.1
+//this SHOULD take port 8834 and port it to 8834 on your local machine so you don't need to use proxy to access nessus (or whatever)
+
+not the same thing? think it is, but different ports:
+ssh user@host -L localhost:9000:localhost:9000 
+//i think this might be a repeat of the above where it closes the thing? or. idk. -L is confusing, i usually stick to -D. 
+
+-L (local port holder) does one port
+-D (dynamic) forwards all the ports, sets up socks proxy **make sure socks button is clicked. 
+
+
+Use a jump host to route Burp through an internal host:
+On the internal host, run:
+ssh -N -T -R1080:localhost:1080 do
+then
+ssh -N -T -D 1080 localhost
+Then locally, run:
+ssh -N -T -C -L 1080:localhost:1080 jumphost
+then
+ssh -N -T -C -D 1080 jumphost
+Then set burp up to talk to 1080 locally.
+
+
+screen:
+screen -ls
+screen -S <name of screen> 
+screen -r <name of screen> 
+screen -rd <name of screen> 
+screen -x <name of screen> 
+ctrl+a, d
+ctrl+a, [
+]
+
+
+chmod:
+chmod +x script.sh
+
+
+rerun last command as sudo:
+sudo !!
+
+recursive(?) search your history:
+ctrl+r? cmd+r? 
+
